@@ -1,17 +1,18 @@
 package motta.dev.MyBimed.model;
 
-import jakarta.persistence.*;
 import lombok.*;
 import motta.dev.MyBimed.enums.StatusProjeto;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Entity
-@Table(name = "projeto")
+@Document(collection = "projeto")
 @Getter
 @Setter
 @Builder
@@ -20,42 +21,27 @@ import java.util.UUID;
 public class ProjetoModel {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(nullable = false)
     private String titulo;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
     private String descricao;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private StatusProjeto statusProjeto;
 
     // Cliente relacionado ao projeto
-    @ManyToOne
-    @JoinColumn(name = "cliente_id", nullable = false)
+    @DBRef
     private ClienteModel cliente;
 
     // Lista de usuários responsáveis pelo projeto
-    @ManyToMany
-    @JoinTable(
-            name = "projeto_equipe",
-            joinColumns = @JoinColumn(name = "projeto_id"),
-            inverseJoinColumns = @JoinColumn(name = "usuario_id")
-    )
+    @DBRef
     private List<UserModel> equipeResponsavel;
 
-    @Column(nullable = false)
     private LocalDateTime dataEntrega;
 
     @CreationTimestamp
-    @Column(updatable = false)
     private LocalDateTime criadoEm;
 
     @UpdateTimestamp
     private LocalDateTime atualizadoEm;
-
 }

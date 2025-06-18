@@ -27,12 +27,13 @@ public class WhatsappWebhookController {
      */
     @GetMapping
     public ResponseEntity<String> verificarWebhook(
-            @RequestParam(name = "hub.mode", required = false) String mode,
-            @RequestParam(name = "hub.challenge", required = false) String challenge,
-            @RequestParam(name = "hub.verify_token", required = false) String verifyToken
+            @RequestParam(name = "hub.mode") String mode,
+            @RequestParam(name = "hub.challenge") String challenge,
+            @RequestParam(name = "hub.verify_token") String verifyToken
     ) {
         log.info("Tentativa de verificação do webhook. Mode={}, Token={}", mode, verifyToken);
 
+        // Verificação do token
         if ("subscribe".equals(mode) && VERIFY_TOKEN.equals(verifyToken)) {
             log.info("Webhook verificado com sucesso.");
             return ResponseEntity.ok(challenge);
@@ -53,6 +54,7 @@ public class WhatsappWebhookController {
         log.info("🔔 Webhook recebido do WhatsApp: {}", payload);
 
         try {
+            // Processa o payload recebido
             whatsappWebhookService.processarWebhook(payload);
             return ResponseEntity.ok().build();
         } catch (Exception e) {

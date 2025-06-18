@@ -112,6 +112,30 @@ public class MensagemService {
         mensagemRepository.deleteById(mensagemId);
     }
 
+    public MensagemModel enviarMensagemViaUrl(UUID chatId, UUID remetenteId, String conteudo, TipoMensagem tipo, String urlArquivo) {
+        var chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
+
+        var remetente = userRepository.findById(remetenteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Remetente não encontrado"));
+
+        var mensagem = MensagemModel.builder()
+                .chat(chat)
+                .remetente(remetente)
+                .conteudo(conteudo)
+                .tipoMensagem(tipo)
+                .urlArquivo(urlArquivo)
+                .statusMensagem(StatusMensagem.ENVIADO)
+                .enviadoEm(LocalDateTime.now())
+                .build();
+
+        var salva = mensagemRepository.save(mensagem);
+
+        simpMessagingTemplate.convertAndSend("/topic/chats/" + chat.getId(), salva);
+
+        return salva;
+    }
+
     public void enviarMensagemParaWebSocket(MensagemModel mensagemModel) {
         simpMessagingTemplate.convertAndSend(
                 "/chat/" + mensagemModel.getChat().getId(),

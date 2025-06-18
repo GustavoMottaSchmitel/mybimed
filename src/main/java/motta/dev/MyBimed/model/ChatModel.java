@@ -6,13 +6,13 @@ import motta.dev.MyBimed.enums.Chat;
 import motta.dev.MyBimed.enums.StatusChat;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Entity
-@Table(name = "chat")
+@Document(collation = "chat")
 @Getter
 @Setter
 @Builder

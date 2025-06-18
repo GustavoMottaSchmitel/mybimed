@@ -26,10 +26,11 @@ public class ProjetoService {
     }
 
     public List<ProjetoModel> getAllProjetos() {
-        if (projetoRepository.findAll().isEmpty()) {
+        List<ProjetoModel> projetos = projetoRepository.findAll();
+        if (projetos.isEmpty()) {
             throw new ResourceIsEmptyException("Não existe nenhum projeto criado no momento!");
         }
-        return projetoRepository.findAll();
+        return projetos;
     }
 
     public ProjetoModel getProjetoById(UUID id) {
@@ -48,7 +49,7 @@ public class ProjetoService {
 
                     return projetoRepository.save(projeto);
                 })
-                .orElseThrow(() -> new ResourceNotFoundException("Não encotramos um projeto com este id"));
+                .orElseThrow(() -> new ResourceNotFoundException("Não encontramos um projeto com este id"));
     }
 
     public void deleteProjeto(UUID id) {

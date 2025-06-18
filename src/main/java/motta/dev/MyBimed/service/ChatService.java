@@ -25,57 +25,46 @@ public class ChatService {
     private final HistoricoChatRepository historicoChatRepository;
 
     public ChatModel createChat(String nome, UUID responsavelId, List<UUID> participantes) {
-        var responsavel = userRepository.findById(responsavelId)
-                .orElseThrow(() -> new ResourceNotFoundException("Responsável não encontrado"));
+        UserModel responsavel = findUserById(responsavelId);
         List<UserModel> participantesList = userRepository.findAllById(participantes);
 
-        var chat = ChatModel.builder()
+        ChatModel chat = ChatModel.builder()
                 .nome(nome)
                 .responsavel(responsavel)
                 .participantes(participantesList)
                 .status(StatusChat.ABERTO)
                 .build();
 
-        var chatSalvo = chatRepository.save(chat);
-
+        ChatModel chatSalvo = chatRepository.save(chat);
         salvarHistorico(chatSalvo, "Chat criado com responsável " + responsavel.getNome());
 
         return chatSalvo;
     }
 
     public ChatModel atualizarStatus(UUID chatId, StatusChat status) {
-        var chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
+        ChatModel chat = findChatById(chatId);
 
         chat.setStatus(status);
         chatRepository.save(chat);
-
         salvarHistorico(chat, "Status alterado para " + status);
 
         return chat;
     }
 
     public ChatModel atualizarResponsavel(UUID chatId, UUID novoResponsavelId) {
-        var chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat nã oencontrado"));
-
-        var novoResponsavel = userRepository.findById(novoResponsavelId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario não encontrado"));
+        ChatModel chat = findChatById(chatId);
+        UserModel novoResponsavel = findUserById(novoResponsavelId);
 
         chat.setResponsavel(novoResponsavel);
         chatRepository.save(chat);
-
-        salvarHistorico(chat, "Responsavel alterado para " + novoResponsavel.getNome());
+        salvarHistorico(chat, "Responsável alterado para " + novoResponsavel.getNome());
 
         return chat;
     }
 
     public ChatModel adicionarParticipante(UUID chatId, UUID participanteId) {
-        var chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
-
-        var participante = userRepository.findById(participanteId)
-                .orElseThrow(() -> new ResourceNotFoundException("Participante não encontrado"));
+        ChatModel chat = findChatById(chatId);
+        UserModel participante = findUserById(participanteId);
 
         if (chat.getParticipantes().contains(participante)) {
             throw new ResourceAlreadyExistsException("Participante já está no chat!");
@@ -83,17 +72,15 @@ public class ChatService {
 
         chat.getParticipantes().add(participante);
         chatRepository.save(chat);
-
-        salvarHistorico(chat, "Participante " + participante.getNome() + "adicionado");
+        salvarHistorico(chat, "Participante " + participante.getNome() + " adicionado");
 
         return chat;
     }
 
-    public ChatModel removerParticipante(UUID chatId, UUID participanteID) {
-        var chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
+    public ChatModel removerParticipante(UUID chatId, UUID participanteId) {
+        ChatModel chat = findChatById(chatId);
 
-        boolean removed = chat.getParticipantes().removeIf(p -> p.getId().equals(participanteID));
+        boolean removed = chat.getParticipantes().removeIf(p -> p.getId().equals(participanteId));
 
         if (!removed) {
             throw new ResourceNotFoundException("Participante não encontrado no chat");
@@ -101,53 +88,59 @@ public class ChatService {
 
         chatRepository.save(chat);
         salvarHistorico(chat, "Participante removido do chat");
+
         return chat;
     }
-
 
     public List<ChatModel> getAllChats() {
         return chatRepository.findAll();
     }
 
     public ChatModel getChatById(UUID id) {
-        return chatRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
+        return findChatById(id);
     }
 
     public ChatModel updateChat(UUID id, ChatModel chatUpdate) {
-        ChatModel chat = chatRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado para o ID informado"));
+        ChatModel chat = findChatById(id);
 
         if (!chat.getNome().equalsIgnoreCase(chatUpdate.getNome()) && chatRepository.existsByNomeIgnoreCase(chatUpdate.getNome())) {
-            throw new ResourceAlreadyExistsException("Ja existe outro chat com este nome");
+            throw new ResourceAlreadyExistsException("Já existe outro chat com este nome");
         }
 
         chat.setNome(chatUpdate.getNome());
         chat.setChatTipo(chatUpdate.getChatTipo());
 
         chatRepository.save(chat);
-
-        salvarHistorico(chat, "Chat atualiazdo");
+        salvarHistorico(chat, "Chat atualizado");
 
         return chat;
     }
 
     public void deleteChat(UUID id) {
-        ChatModel chat = chatRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado para o ID informado"));
-
+        ChatModel chat = findChatById(id);
         chatRepository.delete(chat);
-
         salvarHistorico(chat, "Chat deletado");
     }
 
-    // Historico interno
+    // Histórico interno
     private void salvarHistorico(ChatModel chat, String descricao) {
-        var historico = HistoricoChatModel.builder()
+        HistoricoChatModel historico = HistoricoChatModel.builder()
                 .chat(chat)
                 .realizadoEm(LocalDateTime.now())
                 .descricao(descricao)
                 .build();
         historicoChatRepository.save(historico);
+    }
+
+    // Método auxiliar para buscar o chat
+    private ChatModel findChatById(UUID chatId) {
+        return chatRepository.findById(chatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
+    }
+
+    // Método auxiliar para buscar o usuário
+    private UserModel findUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
     }
 }

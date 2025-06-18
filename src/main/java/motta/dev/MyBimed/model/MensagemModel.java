@@ -1,16 +1,17 @@
 package motta.dev.MyBimed.model;
 
-import jakarta.persistence.*;
 import lombok.*;
 import motta.dev.MyBimed.enums.StatusMensagem;
 import motta.dev.MyBimed.enums.TipoMensagem;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "mensagem")
+@Document(collection = "mensagem")
 @Getter
 @Setter
 @Builder
@@ -19,48 +20,35 @@ import java.util.UUID;
 public class MensagemModel {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    // Em qual chat essa mensagem foi enviada
-    @ManyToOne
-    @JoinColumn(name = "chat_id", nullable = false)
+    // Referência para o chat
+    @DBRef
     private ChatModel chat;
 
-    @ManyToOne
-    @JoinColumn(name = "cliente_id")
+    // Referência para o cliente
+    @DBRef
     private ClienteModel cliente;
 
-    // Quem enviou essa mensagem
-    @ManyToOne
-    @JoinColumn(name = "remetente_id", nullable = false)
+    // Referência para o remetente
+    @DBRef
     private UserModel remetente;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
     private String conteudo;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private TipoMensagem tipoMensagem;
 
     private String urlArquivo;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private StatusMensagem statusMensagem = StatusMensagem.ENVIADO;
 
-    @Column(nullable = false)
     private boolean mensagemDeEntrada;
 
     @CreationTimestamp
-    @Column(nullable = false)
     private LocalDateTime enviadoEm;
 
-    @Column(nullable = false)
     private boolean ativo = true;
 
     private LocalDateTime lidoEm;
     private LocalDateTime entregueEm;
-
 }

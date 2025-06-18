@@ -19,9 +19,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -61,14 +59,7 @@ public class WebhookService {
             ChatModel chat = chatRepository.findByNome(telefone)
                     .orElseGet(() -> criarChatParaWhatsApp(remetente));
 
-            TipoMensagem tipo = TipoMensagem.TEXTO;
-            try {
-                if (tipoMensagem != null) {
-                    tipo = TipoMensagem.valueOf(tipoMensagem.toUpperCase());
-                }
-            } catch (IllegalArgumentException e) {
-                tipo = TipoMensagem.TEXTO;
-            }
+            TipoMensagem tipo = obterTipoMensagem(tipoMensagem);
 
             String urlArquivo = null;
             if (urlMidia != null && !urlMidia.isBlank()) {
@@ -99,52 +90,14 @@ public class WebhookService {
         }
     }
 
-    public void receberMensagemDoWhatsApp(String telefone, String nome, String conteudo, String tipo, String urlMidia) {
-        // Verificar se existe usuário para este telefone
-        UserModel remetente = userRepository.findByTelefone(telefone)
-                .orElseGet(() -> criarUsuarioWhatsApp(telefone, nome));
-
-        // Verificar se existe chat com este telefone
-        ChatModel chat = chatRepository.findByNome(telefone)
-                .orElseGet(() -> criarChatParaWhatsApp(remetente));
-
-        if (conteudo == null && urlMidia == null) {
-            throw new IllegalArgumentException("Conteúdo da mensagem ou URL de mídia precisa ser fornecido");
-        }
-
-        // Verificar tipo de mensagem
-        TipoMensagem tipoMensagem;
+    private TipoMensagem obterTipoMensagem(String tipoMensagem) {
         try {
-            tipoMensagem = tipo != null ? TipoMensagem.valueOf(tipo.toUpperCase()) : TipoMensagem.TEXTO;
+            return tipoMensagem != null ? TipoMensagem.valueOf(tipoMensagem.toUpperCase()) : TipoMensagem.TEXTO;
         } catch (IllegalArgumentException e) {
-            tipoMensagem = TipoMensagem.TEXTO;  // Mensagem de texto por padrão
+            log.warn("Tipo de mensagem inválido, utilizando o padrão TEXTO.");
+            return TipoMensagem.TEXTO;  // Padrão para tipo de mensagem TEXTO
         }
-
-        // Processar mídia, se existir
-        String urlArquivo = null;
-        if (urlMidia != null && !urlMidia.isBlank()) {
-            urlArquivo = uploadMidiaParaCloud(urlMidia);
-        }
-
-        // Criar mensagem
-        MensagemModel mensagem = MensagemModel.builder()
-                .chat(chat)
-                .remetente(remetente)
-                .conteudo(conteudo)
-                .tipoMensagem(tipoMensagem)
-                .urlArquivo(urlArquivo)
-                .statusMensagem(StatusMensagem.RECEBIDO)
-                .enviadoEm(LocalDateTime.now())
-                .build();
-
-        mensagemRepository.save(mensagem);
-
-        // Emitir via WebSocket
-        simpMessagingTemplate.convertAndSend("/topic/chats/" + chat.getId(), mensagem);
-
-        log.info("Mensagem recebida e enviada via WebSocket para chat {}", chat.getId());
     }
-
 
     /**
      * Cria chat automaticamente quando vem uma nova mensagem de um número não cadastrado.
@@ -168,14 +121,12 @@ public class WebhookService {
                 .nome(nome != null ? nome : telefone)
                 .telefone(telefone)
                 .build();
-
         return userRepository.save(user);
     }
 
     /**
      * Faz download da mídia via URL (API do WhatsApp) e envia para um serviço de arquivos na nuvem.
      */
-
     private String uploadMidiaParaCloud(String urlMidia) {
         try {
             HttpClient client = HttpClient.newHttpClient();

@@ -2,11 +2,11 @@ package motta.dev.MyBimed.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.UUID;
 
-@Entity
-@Table(name = "arquivo")
+@Document(collation = "arquivo")
 @Getter
 @Setter
 @Builder

@@ -8,7 +8,6 @@ import motta.dev.MyBimed.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -19,7 +18,7 @@ public class UserService {
 
     public UserModel createUser(UserModel user) {
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new ResourceAlreadyExistsException("Este email ja esta cadastrado.");
+            throw new ResourceAlreadyExistsException("Este email já está cadastrado.");
         }
 
         return userRepository.save(user);
@@ -49,7 +48,7 @@ public class UserService {
 
     public void deleteUser(UUID id) {
         if (!userRepository.existsById(id)) {
-            new ResourceNotFoundException("Usuario não encontrado");
+            throw new ResourceNotFoundException("Usuário não encontrado");
         }
         userRepository.deleteById(id);
     }

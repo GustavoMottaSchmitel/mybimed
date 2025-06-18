@@ -3,7 +3,7 @@ package motta.dev.MyBimed.repository;
 import motta.dev.MyBimed.enums.StatusChat;
 import motta.dev.MyBimed.model.ChatModel;
 import motta.dev.MyBimed.model.UserModel;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import javax.swing.text.html.Option;
@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ChatRepository extends JpaRepository<ChatModel, UUID> {
+public interface ChatRepository extends MongoRepository<ChatModel, UUID> {
 
     Optional<ChatModel> findByNome(String nome);
 

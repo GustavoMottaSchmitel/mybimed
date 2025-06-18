@@ -5,6 +5,7 @@ import motta.dev.MyBimed.model.ChatModel;
 import motta.dev.MyBimed.model.MensagemModel;
 import motta.dev.MyBimed.model.UserModel;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface MensagemRepository extends JpaRepository<MensagemModel, UUID> {
+public interface MensagemRepository extends MongoRepository<MensagemModel, UUID> {
 
 
     // Buscar mensagens de um chat, ordenados por data de envio (ascendente)
