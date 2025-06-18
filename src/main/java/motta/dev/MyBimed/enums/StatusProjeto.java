@@ -1,6 +1,6 @@
 package motta.dev.MyBimed.enums;
 
-public enum ProjetoStatus {
+public enum StatusProjeto {
 
     EM_ANDAMENTO,
     FINALIZADO,

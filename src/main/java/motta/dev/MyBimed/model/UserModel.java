@@ -3,7 +3,7 @@ package motta.dev.MyBimed.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import motta.dev.MyBimed.enums.Cargos;
+import motta.dev.MyBimed.enums.Cargo;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -36,7 +36,7 @@ public class UserModel {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Cargos cargo;
+    private Cargo cargo;
 
     private String fotoPerfil;
 

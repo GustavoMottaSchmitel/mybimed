@@ -6,8 +6,9 @@ public enum TipoMensagem {
     IMAGEM,
     ARQUIVO,
     VIDEO,
-    UDIO,
+    CONTATO,
+    LOCALIZACAO,
+    AUDIO,
     DOCUMENTO,
     STICKER,
-    OUTRO
 }

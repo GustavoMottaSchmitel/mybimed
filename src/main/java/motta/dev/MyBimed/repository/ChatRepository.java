@@ -6,6 +6,7 @@ import motta.dev.MyBimed.model.UserModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,9 +14,15 @@ import java.util.UUID;
 @Repository
 public interface ChatRepository extends JpaRepository<ChatModel, UUID> {
 
+    Optional<ChatModel> findByNome(String nome);
+
     List<ChatModel> findByResponsavelId(UUID responsavelId);
 
+    List<ChatModel> findByResponsavel(UserModel responsavel);
+
     List<ChatModel> findByStatus(StatusChat status);
+
+    List<ChatModel> findByParticipantesContaining(UserModel participante);
 
     List<ChatModel> findByParticipantesId(UUID participantesId);
 

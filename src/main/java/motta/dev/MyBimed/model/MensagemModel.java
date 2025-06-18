@@ -28,6 +28,10 @@ public class MensagemModel {
     @JoinColumn(name = "chat_id", nullable = false)
     private ChatModel chat;
 
+    @ManyToOne
+    @JoinColumn(name = "cliente_id")
+    private ClienteModel cliente;
+
     // Quem enviou essa mensagem
     @ManyToOne
     @JoinColumn(name = "remetente_id", nullable = false)
@@ -43,11 +47,18 @@ public class MensagemModel {
     private String urlArquivo;
 
     @Enumerated(EnumType.STRING)
-    private StatusMensagem statusMensagem;
+    @Column(nullable = false)
+    private StatusMensagem statusMensagem = StatusMensagem.ENVIADO;
+
+    @Column(nullable = false)
+    private boolean mensagemDeEntrada;
 
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime enviadoEm;
+
+    @Column(nullable = false)
+    private boolean ativo = true;
 
     private LocalDateTime lidoEm;
     private LocalDateTime entregueEm;

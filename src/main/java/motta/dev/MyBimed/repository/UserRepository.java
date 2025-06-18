@@ -12,5 +12,9 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<UserModel, UUID> {
 
     Optional<UserModel> findByEmail(String email);
+
     boolean existsByEmail(String email);
+
+    // Buscar usuário por telefone (caso utilize como identificador de WhatsApp, por exemplo)
+    Optional<UserModel> findByTelefone(String telefone);
 }

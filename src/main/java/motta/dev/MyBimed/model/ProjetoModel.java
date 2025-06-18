@@ -2,7 +2,7 @@ package motta.dev.MyBimed.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import motta.dev.MyBimed.enums.ProjetoStatus;
+import motta.dev.MyBimed.enums.StatusProjeto;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -32,7 +32,7 @@ public class ProjetoModel {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProjetoStatus projetoStatus;
+    private StatusProjeto statusProjeto;
 
     // Cliente relacionado ao projeto
     @ManyToOne
