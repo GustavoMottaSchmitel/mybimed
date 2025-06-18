@@ -1,0 +1,26 @@
+package motta.dev.MyBimed.repository;
+
+import motta.dev.MyBimed.enums.StatusChat;
+import motta.dev.MyBimed.model.ChatModel;
+import motta.dev.MyBimed.model.UserModel;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface ChatRepository extends JpaRepository<ChatModel, UUID> {
+
+    List<ChatModel> findByResponsavelId(UUID responsavelId);
+
+    List<ChatModel> findByStatus(StatusChat status);
+
+    List<ChatModel> findByParticipantesId(UUID participantesId);
+
+    List<ChatModel> findByNomeContainingIgnoreCase(String nome);
+
+    boolean existsByNomeIgnoreCase(String nome);
+
+}
