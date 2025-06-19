@@ -4,35 +4,21 @@ import motta.dev.MyBimed.enums.StatusMensagem;
 import motta.dev.MyBimed.model.ChatModel;
 import motta.dev.MyBimed.model.MensagemModel;
 import motta.dev.MyBimed.model.UserModel;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface MensagemRepository extends MongoRepository<MensagemModel, UUID> {
-
-
-    // Buscar mensagens de um chat, ordenados por data de envio (ascendente)
+public interface MensagemRepository extends MongoRepository<MensagemModel, String> {
 
     List<MensagemModel> findByChatOrderByEnviadoEmAsc(ChatModel chat);
-
-    // Buscar mensagens de um chat enviados por um usuario especifico
-
     List<MensagemModel> findByChatAndRemetente(ChatModel chat, UserModel remetente);
-
-    // Buscar não lidos de um chat
-
     List<MensagemModel> findByChatAndStatusMensagem(ChatModel chat, StatusMensagem statusMensagem);
-
-    // Buscar as últimas N mensagens de um chat
-
     List<MensagemModel> findTop20ByChatOrderByEnviadoEmDesc(ChatModel chat);
-
-    List<MensagemModel> findByChatId(UUID chatid);
-
-    void deleteByChatId(UUID chatId);
+    Page<MensagemModel> findByChatIdOrderByEnviadoEmDesc(String chatId, Pageable pageable);
+    List<MensagemModel> findByChatId(String chatId);
+    void deleteByChatId(String chatId);
 }

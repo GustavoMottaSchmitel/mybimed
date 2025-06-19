@@ -1,18 +1,18 @@
 package motta.dev.MyBimed.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.PrePersist;
 import lombok.*;
 import motta.dev.MyBimed.enums.Chat;
 import motta.dev.MyBimed.enums.StatusChat;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.*;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
-@Document(collation = "chat")
+@Document(collection = "chats")  // Nome da coleção no plural
 @Getter
 @Setter
 @Builder
@@ -21,38 +21,51 @@ import java.util.UUID;
 public class ChatModel {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    private String id;  // Usando String para melhor compatibilidade com MongoDB
 
-    @Column(nullable = false)
+    @Field(name = "nome")
     private String nome;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Chat chatTipo;
+    @Field(name = "tipo")
+    private Chat tipo;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Field(name = "status")
     private StatusChat status;
 
-    @ManyToOne
-    @JoinColumn(name = "responsavel_id", nullable = false)
+    @DBRef(lazy = true)  // Referência lazy para melhor performance
+    @Field(name = "responsavel_id")
     private UserModel responsavel;
 
-    // Relacionamento de muitos-para-muitos entre Chat e User (Participantes do Chat)
-    @ManyToMany
-    @JoinTable(
-            name = "chat_participantes", // Nome da tabela que vai guardar os participantes
-            joinColumns = @JoinColumn(name = "chat_id"), // Vai guardar o id do chhat
-            inverseJoinColumns = @JoinColumn(name = "usuario_id") // E O ID DO USUARIO
-    )
+    @DBRef(lazy = true)
+    @Field(name = "participantes")
     private List<UserModel> participantes;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedDate
+    @Field(name = "criado_em")
     private LocalDateTime criadoEm;
 
-    @UpdateTimestamp
+    @LastModifiedDate
+    @Field(name = "atualizado_em")
     private LocalDateTime atualizadoEm;
+
+    @Version
+    private Long version;  // Para controle de concorrência
+
+    // Método para gerar ID automaticamente
+    @PrePersist
+    public void generateId() {
+        if (this.id == null) {
+            this.id = java.util.UUID.randomUUID().toString();
+        }
+    }
+
+    // Métodos de negócio
+    public boolean isAtivo() {
+        return this.status == StatusChat.ATIVO;
+    }
+
+    public boolean hasParticipante(UserModel usuario) {
+        return this.participantes.stream()
+                .anyMatch(p -> p.getId().equals(usuario.getId()));
+    }
 }

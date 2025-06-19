@@ -7,5 +7,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.UUID;
 
-public interface HistoricoChatRepository extends MongoRepository<HistoricoChatModel, UUID> {
+public interface HistoricoChatRepository extends MongoRepository<HistoricoChatModel, String> {
 }

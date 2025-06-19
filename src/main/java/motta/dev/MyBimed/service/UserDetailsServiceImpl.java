@@ -1,76 +1,55 @@
 package motta.dev.MyBimed.security;
 
 import lombok.RequiredArgsConstructor;
-import motta.dev.MyBimed.security.JwtAuthFilter;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import lombok.extern.slf4j.Slf4j;
+import motta.dev.MyBimed.model.UserModel;
+import motta.dev.MyBimed.repository.UserRepository;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
 
-@Configuration
-@EnableWebSecurity // Opcional, mas pode deixar para indicar segurança explicitamente
+import java.util.Collections;
+import java.util.List;
+
+@Slf4j
+@Service
 @RequiredArgsConstructor
-public class SecurityConfig {
+public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final JwtAuthFilter jwtAuthFilter;
-    private final UserDetailsService userDetailsService;
-    private final AuthenticationEntryPoint authenticationEntryPoint; // Tratar 401/403
+    private final UserRepository userRepository;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(csrf -> csrf.disable()) // CSRF desabilitado para API REST
-                .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        log.debug("Carregando usuário pelo email: {}", email);
 
-                        // Exemplo: permitir GET público de produtos
-                        .requestMatchers(HttpMethod.GET, "/api/produtos/**").permitAll()
+        UserModel user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.error("Usuário não encontrado com email: {}", email);
+                    return new UsernameNotFoundException("Credenciais inválidas");
+                });
 
-                        // Endpoints protegidos
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
-                )
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                )
-                .sessionManagement(sess -> sess
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless = JWT
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        log.debug("Usuário encontrado: {}", user.getEmail());
+
+        return createUserDetails(user);
+    }
+
+    private UserDetails createUserDetails(UserModel user) {
+        List<GrantedAuthority> authorities = Collections.singletonList(
+                new SimpleGrantedAuthority("ROLE_" + user.getCargo().name())
+        );
+
+        return User.builder()
+                .username(user.getEmail())
+                .password(user.getSenha())
+                .authorities(authorities)
+                .accountLocked(!user.isAtivo())
+                .disabled(!user.isAtivo())
+                .accountExpired(false)
+                .credentialsExpired(false)
                 .build();
-    }
-
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-            throws Exception {
-        return config.getAuthenticationManager();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }

@@ -4,5 +4,6 @@ public enum StatusChat {
     ABERTO,
     EM_ATENDIMENTO,
     AGUARDANDO_CLIENTE,
-    FECHADO
+    FECHADO,
+    ATIVO
 }

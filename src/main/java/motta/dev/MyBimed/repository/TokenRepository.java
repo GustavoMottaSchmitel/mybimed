@@ -5,9 +5,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-public interface TokenRepository extends MongoRepository<TokenModel, UUID> {
-    List<TokenModel> findAllByUserId(UUID userId);
+public interface TokenRepository extends MongoRepository<TokenModel, String> {
+    List<TokenModel> findAllByUserId(String userId);
     Optional<TokenModel> findByToken(String token);
 }

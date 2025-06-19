@@ -1,18 +1,17 @@
 package motta.dev.MyBimed.model;
 
+import jakarta.persistence.PrePersist;
 import lombok.*;
 import motta.dev.MyBimed.enums.StatusProjeto;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.*;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
-@Document(collection = "projeto")
+@Document(collection = "projetos")
 @Getter
 @Setter
 @Builder
@@ -21,27 +20,50 @@ import java.util.UUID;
 public class ProjetoModel {
 
     @Id
-    private UUID id;
+    private String id;
 
+    @Field(name = "titulo")
     private String titulo;
 
+    @Field(name = "descricao")
     private String descricao;
 
-    private StatusProjeto statusProjeto;
+    @Field(name = "status")
+    private StatusProjeto status;
 
-    // Cliente relacionado ao projeto
-    @DBRef
+    @DBRef(lazy = true)
+    @Field(name = "cliente")
     private ClienteModel cliente;
 
-    // Lista de usuários responsáveis pelo projeto
-    @DBRef
-    private List<UserModel> equipeResponsavel;
+    @DBRef(lazy = true)
+    @Field(name = "equipe")
+    private List<UserModel> equipe;
 
+    @Field(name = "data_entrega")
     private LocalDateTime dataEntrega;
 
-    @CreationTimestamp
+    @CreatedDate
+    @Field(name = "criado_em")
     private LocalDateTime criadoEm;
 
-    @UpdateTimestamp
+    @LastModifiedDate
+    @Field(name = "atualizado_em")
     private LocalDateTime atualizadoEm;
+
+    @Version
+    private Long version;
+
+    // Método para gerar ID
+    @PrePersist
+    public void generateId() {
+        if (this.id == null) {
+            this.id = java.util.UUID.randomUUID().toString();
+        }
+    }
+
+    // Método para verificar se o projeto está ativo
+    public boolean isAtivo() {
+        return status == StatusProjeto.EM_ANDAMENTO ||
+                status == StatusProjeto.EM_ANALISE;
+    }
 }

@@ -4,5 +4,6 @@ public enum StatusMensagem {
     ENVIADO,
     RECEBIDO,
     ENTREGUE,
-    LIDA
+    LIDO,
+    ERRO
 }

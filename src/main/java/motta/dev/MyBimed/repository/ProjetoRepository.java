@@ -1,18 +1,13 @@
 package motta.dev.MyBimed.repository;
 
 import motta.dev.MyBimed.model.ProjetoModel;
-import motta.dev.MyBimed.model.UserModel;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface ProjetoRepository extends MongoRepository<ProjetoModel, UUID> {
+public interface ProjetoRepository extends MongoRepository<ProjetoModel, String> {
     List<ProjetoModel> findByTituloContainingIgnoreCase(String titulo);
-
     boolean existsByTituloIgnoreCase(String titulo);
 }

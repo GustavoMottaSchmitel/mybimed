@@ -3,160 +3,194 @@ package motta.dev.MyBimed.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import motta.dev.MyBimed.enums.Chat;
-import motta.dev.MyBimed.enums.StatusChat;
-import motta.dev.MyBimed.enums.StatusMensagem;
-import motta.dev.MyBimed.enums.TipoMensagem;
-import motta.dev.MyBimed.exception.ResourceNotFoundException;
-import motta.dev.MyBimed.model.ChatModel;
-import motta.dev.MyBimed.model.MensagemModel;
-import motta.dev.MyBimed.model.UserModel;
-import motta.dev.MyBimed.repository.ChatRepository;
-import motta.dev.MyBimed.repository.MensagemRepository;
-import motta.dev.MyBimed.repository.UserRepository;
-import motta.dev.MyBimed.request.WhatsAppWebhookRequest;
+import motta.dev.MyBimed.dto.WhatsAppWebhookRequest;
+import motta.dev.MyBimed.enums.*;
+import motta.dev.MyBimed.exception.WebhookProcessingException;
+import motta.dev.MyBimed.model.*;
+import motta.dev.MyBimed.repository.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WebhookService {
 
+    private static final String DEFAULT_SYSTEM_USER_EMAIL = "suporte@mybimed.com";
+    private static final String CLOUD_UPLOAD_PATH = "MyBimed/uploads";
+    private static final long MEDIA_PROCESSING_TIMEOUT = 30;
+
     private final ChatRepository chatRepository;
     private final MensagemRepository mensagemRepository;
-    private final MensagemService mensagemService;
     private final UserRepository userRepository;
-    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final SimpMessagingTemplate messagingTemplate;
     private final FileService fileService;
     private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
+    private final Executor taskExecutor; // Executor assíncrono configurado
 
-    public void processarWebhook(String payload) {
-        try {
-            WhatsAppWebhookRequest webhookRequest = objectMapper.readValue(payload, WhatsAppWebhookRequest.class);
+    @Async
+    @Transactional
+    public CompletableFuture<Void> processarWebhook(String payload) {
+        return parsePayloadAsync(payload)
+                .thenCompose(this::processarMensagemAsync)
+                .exceptionally(ex -> {
+                    log.error("Falha no processamento do webhook", ex);
+                    return null;
+                });
+    }
 
-            String telefone = webhookRequest.getTelefone();
-            String nome = webhookRequest.getNome();
-            String conteudo = webhookRequest.getConteudo();
-            String tipoMensagem = webhookRequest.getTipoMensagem();
-            String urlMidia = webhookRequest.getUrlArquivo();
-
-            log.info("Processando mensagem de WhatsApp do número: {}", telefone);
-
-            // Verificar se existe usuário para este telefone
-            UserModel remetente = userRepository.findByTelefone(telefone)
-                    .orElseGet(() -> criarUsuarioWhatsApp(telefone, nome));
-
-            // Verificar se existe chat com este telefone
-            ChatModel chat = chatRepository.findByNome(telefone)
-                    .orElseGet(() -> criarChatParaWhatsApp(remetente));
-
-            TipoMensagem tipo = obterTipoMensagem(tipoMensagem);
-
-            String urlArquivo = null;
-            if (urlMidia != null && !urlMidia.isBlank()) {
-                urlArquivo = uploadMidiaParaCloud(urlMidia);
+    private CompletableFuture<WhatsAppWebhookRequest> parsePayloadAsync(String payload) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return objectMapper.readValue(payload, WhatsAppWebhookRequest.class);
+            } catch (Exception e) {
+                throw new WebhookProcessingException("Falha ao analisar o payload", e);
             }
+        }, taskExecutor);
+    }
 
-            MensagemModel mensagem = MensagemModel.builder()
-                    .chat(chat)
-                    .remetente(remetente)
-                    .conteudo(conteudo)
-                    .tipoMensagem(tipo)
-                    .urlArquivo(urlArquivo)
-                    .statusMensagem(StatusMensagem.RECEBIDO)
-                    .enviadoEm(LocalDateTime.now())
-                    .build();
+    private CompletableFuture<Void> processarMensagemAsync(WhatsAppWebhookRequest request) {
+        return obterOuCriarUsuarioAsync(request)
+                .thenCompose(remetente -> obterOuCriarChatAsync(remetente)
+                        .thenCompose(chat -> processarMidiaEEnviarMensagem(request, chat))
+                        .orTimeout(MEDIA_PROCESSING_TIMEOUT, TimeUnit.SECONDS));
+    }
 
-            // Salvar a mensagem no banco de dados
+    private CompletableFuture<UserModel> obterOuCriarUsuarioAsync(WhatsAppWebhookRequest request) {
+        return CompletableFuture.supplyAsync(() ->
+                        userRepository.findByTelefone(request.getTelefone())
+                                .orElseGet(() -> criarUsuarioWhatsApp(request))
+                , taskExecutor);
+    }
+
+    private CompletableFuture<ChatModel> obterOuCriarChatAsync(UserModel usuario) {
+        return CompletableFuture.supplyAsync(() ->
+                        chatRepository.findByNome(usuario.getTelefone())
+                                .orElseGet(() -> criarChatParaWhatsApp(usuario))
+                , taskExecutor);
+    }
+
+    private CompletableFuture<Void> processarMidiaEEnviarMensagem(
+            WhatsAppWebhookRequest request,
+            ChatModel chat) {
+
+        CompletableFuture<String> midiaFuture = Optional.ofNullable(request.getUrlArquivo())
+                .filter(url -> !url.isBlank())
+                .map(this::processarMidiaAsync)
+                .orElse(CompletableFuture.completedFuture(null));
+
+        return midiaFuture.thenCompose(urlArquivo -> {
+            MensagemModel mensagem = criarMensagem(request, chat.getResponsavel(), chat, urlArquivo);
+            return salvarEEnviarMensagemAsync(mensagem, chat.getId());
+        });
+    }
+
+    private CompletableFuture<String> processarMidiaAsync(String urlMidia) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                byte[] fileBytes = downloadMidia(urlMidia);
+                return fileService.uploadFileFromBytes(fileBytes, CLOUD_UPLOAD_PATH);
+            } catch (Exception e) {
+                log.error("Falha no processamento de mídia", e);
+                return null;
+            }
+        }, taskExecutor);
+    }
+
+    private CompletableFuture<Void> salvarEEnviarMensagemAsync(MensagemModel mensagem, String chatId) {
+        return CompletableFuture.runAsync(() -> {
             mensagemRepository.save(mensagem);
-
-            // Emitir a mensagem via WebSocket
-            simpMessagingTemplate.convertAndSend("/topic/chats/" + chat.getId(), mensagem);
-
-            log.info("Mensagem processada e enviada para o WebSocket do chat: {}", chat.getId());
-
-        } catch (IOException e) {
-            log.error("Erro ao processar o payload do webhook: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao processar o webhook", e);
-        }
+            enviarMensagemWebSocket(chatId, mensagem);
+        }, taskExecutor);
     }
 
-    private TipoMensagem obterTipoMensagem(String tipoMensagem) {
-        try {
-            return tipoMensagem != null ? TipoMensagem.valueOf(tipoMensagem.toUpperCase()) : TipoMensagem.TEXTO;
-        } catch (IllegalArgumentException e) {
-            log.warn("Tipo de mensagem inválido, utilizando o padrão TEXTO.");
-            return TipoMensagem.TEXTO;  // Padrão para tipo de mensagem TEXTO
-        }
-    }
-
-    /**
-     * Cria chat automaticamente quando vem uma nova mensagem de um número não cadastrado.
-     */
-    private ChatModel criarChatParaWhatsApp(UserModel usuario) {
-        ChatModel chat = ChatModel.builder()
-                .nome(usuario.getTelefone()) // Chat nomeado pelo telefone
-                .responsavel(buscarUsuarioSistema()) // Você pode configurar um usuário responsável padrão
-                .participantes(List.of(buscarUsuarioSistema()))
-                .chatTipo(Chat.WHATSAPP)
-                .status(StatusChat.ABERTO)
+    private byte[] downloadMidia(String urlMidia) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(urlMidia))
+                .GET()
                 .build();
-        return chatRepository.save(chat);
+
+        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+        if (response.statusCode() != 200) {
+            throw new WebhookProcessingException(
+                    "Falha ao baixar mídia. Código HTTP: " + response.statusCode());
+        }
+
+        return response.body();
     }
 
-    /**
-     * Cria usuário automaticamente quando vem uma nova mensagem de um telefone não cadastrado.
-     */
-    private UserModel criarUsuarioWhatsApp(String telefone, String nome) {
+    private void enviarMensagemWebSocket(String chatId, MensagemModel mensagem) {
+        try {
+            messagingTemplate.convertAndSend("/topic/chats/" + chatId, mensagem);
+            log.info("Mensagem enviada via WebSocket para o chat: {}", chatId);
+        } catch (Exception e) {
+            log.error("Falha ao enviar mensagem via WebSocket", e);
+        }
+    }
+
+    private UserModel criarUsuarioWhatsApp(WhatsAppWebhookRequest request) {
         UserModel user = UserModel.builder()
-                .nome(nome != null ? nome : telefone)
-                .telefone(telefone)
+                .nome(request.getNome() != null ? request.getNome() : request.getTelefone())
+                .telefone(request.getTelefone())
                 .build();
         return userRepository.save(user);
     }
 
-    /**
-     * Faz download da mídia via URL (API do WhatsApp) e envia para um serviço de arquivos na nuvem.
-     */
-    private String uploadMidiaParaCloud(String urlMidia) {
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(urlMidia))
-                    .GET()
-                    .build();
+    private ChatModel criarChatParaWhatsApp(UserModel usuario) {
+        UserModel responsavel = userRepository.findByEmail(DEFAULT_SYSTEM_USER_EMAIL)
+                .orElseThrow(() -> new WebhookProcessingException("Usuário padrão não encontrado"));
 
-            HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        ChatModel chat = ChatModel.builder()
+                .nome(usuario.getTelefone())
+                .responsavel(responsavel)
+                .participantes(List.of(responsavel))
+                .tipo(Chat.WHATSAPP)
+                .status(StatusChat.ABERTO)
+                .build();
 
-            if (response.statusCode() == 200) {
-                byte[] bytes = response.body();
-                return fileService.uploadFileFromBytes(bytes, "MyBimed/uploads");
-            } else {
-                log.error("Falha ao baixar mídia. Código HTTP: {}", response.statusCode());
-                throw new RuntimeException("Falha ao baixar mídia. Código HTTP: " + response.statusCode());
-            }
-
-        } catch (IOException | InterruptedException e) {
-            log.error("Erro ao baixar/upload da mídia do WhatsApp: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao fazer upload da mídia", e);
-        }
+        return chatRepository.save(chat);
     }
 
-    /**
-     * Usuário responsável padrão.
-     */
-    private UserModel buscarUsuarioSistema() {
-        // Aqui poderia buscar um usuário padrão cadastrado no sistema
-        return userRepository.findByEmail("mottaschmitelg@gmail.com")
-                .orElseThrow(() -> new RuntimeException("Usuário padrão não encontrado"));
+    private MensagemModel criarMensagem(
+            WhatsAppWebhookRequest request,
+            UserModel remetente,
+            ChatModel chat,
+            String urlArquivo) {
+
+        return MensagemModel.builder()
+                .chat(chat)
+                .remetente(remetente)
+                .conteudo(request.getConteudo())
+                .tipo(obterTipoMensagem(request.getTipoMensagem()))
+                .urlArquivo(urlArquivo)
+                .status(StatusMensagem.RECEBIDO)
+                .enviadoEm(LocalDateTime.now())
+                .build();
+    }
+
+    private TipoMensagem obterTipoMensagem(String tipoMensagem) {
+        try {
+            return tipoMensagem != null ?
+                    TipoMensagem.valueOf(tipoMensagem.toUpperCase()) :
+                    TipoMensagem.TEXTO;
+        } catch (IllegalArgumentException e) {
+            log.warn("Tipo de mensagem inválido: {}, usando padrão TEXTO", tipoMensagem);
+            return TipoMensagem.TEXTO;
+        }
     }
 }

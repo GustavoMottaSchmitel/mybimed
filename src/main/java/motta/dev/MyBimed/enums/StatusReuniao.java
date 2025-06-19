@@ -5,6 +5,8 @@ public enum StatusReuniao {
     PENDENTE,
     CONFIRMADA,
     CANCELADA,
-    FINALIZADA
+    FINALIZADA,
+    EM_ANDAMENTO,
+    AGENDADA
 
 }

@@ -1,4 +1,4 @@
-package motta.dev.MyBimed.request;
+package motta.dev.MyBimed.dto;
 
 import lombok.Data;
 import motta.dev.MyBimed.enums.TipoMensagem;

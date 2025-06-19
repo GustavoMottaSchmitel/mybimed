@@ -4,5 +4,6 @@ public enum StatusProjeto {
 
     EM_ANDAMENTO,
     FINALIZADO,
-    AGENDADO
+    AGENDADO,
+    EM_ANALISE
 }
