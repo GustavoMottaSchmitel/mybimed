@@ -19,7 +19,7 @@ public class AgendaService {
         return agendaRepository.findAll();
     }
 
-    public AgendaModel getAgendaById(UUID id) {
+    public AgendaModel getAgendaById(String id) {
         return agendaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agenda não encontrada"));
     }

@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -119,19 +120,28 @@ public class WebhookService {
     }
 
     private byte[] downloadMidia(String urlMidia) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(urlMidia))
-                .GET()
-                .build();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(urlMidia))
+                    .timeout(Duration.ofSeconds(30))
+                    .GET()
+                    .build();
 
-        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<byte[]> response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofByteArray()
+            );
 
-        if (response.statusCode() != 200) {
-            throw new WebhookProcessingException(
-                    "Falha ao baixar mídia. Código HTTP: " + response.statusCode());
+            if (response.statusCode() != 200) {
+                throw new WebhookProcessingException(
+                        "Falha ao baixar mídia. Código HTTP: " + response.statusCode());
+            }
+
+            return response.body();
+        } catch (Exception e) {
+            log.error("Erro ao baixar mídia da URL: {}", urlMidia, e);
+            throw new WebhookProcessingException("Erro no download de mídia", e);
         }
-
-        return response.body();
     }
 
     private void enviarMensagemWebSocket(String chatId, MensagemModel mensagem) {

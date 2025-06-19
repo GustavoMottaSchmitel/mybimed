@@ -16,7 +16,7 @@ public interface MensagemRepository extends MongoRepository<MensagemModel, Strin
 
     List<MensagemModel> findByChatOrderByEnviadoEmAsc(ChatModel chat);
     List<MensagemModel> findByChatAndRemetente(ChatModel chat, UserModel remetente);
-    List<MensagemModel> findByChatAndStatusMensagem(ChatModel chat, StatusMensagem statusMensagem);
+    List<MensagemModel> findByChatAndStatus(ChatModel chat, StatusMensagem status);
     List<MensagemModel> findTop20ByChatOrderByEnviadoEmDesc(ChatModel chat);
     Page<MensagemModel> findByChatIdOrderByEnviadoEmDesc(String chatId, Pageable pageable);
     List<MensagemModel> findByChatId(String chatId);

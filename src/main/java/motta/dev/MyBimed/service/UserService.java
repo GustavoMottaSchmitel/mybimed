@@ -28,12 +28,12 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public UserModel getUserById(UUID id) {
+    public UserModel getUserById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
     }
 
-    public UserModel updateUser(UUID id, UserModel updateUser) {
+    public UserModel updateUser(String id, UserModel updateUser) {
         return userRepository.findById(id)
                 .map(user -> {
                     user.setNome(updateUser.getNome());
@@ -46,7 +46,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
     }
 
-    public void deleteUser(UUID id) {
+    public void deleteUser(String id) {
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("Usuário não encontrado");
         }

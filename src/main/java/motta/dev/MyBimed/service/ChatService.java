@@ -24,7 +24,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final HistoricoChatRepository historicoChatRepository;
 
-    public ChatModel createChat(String nome, UUID responsavelId, List<UUID> participantes) {
+    public ChatModel createChat(String nome, String responsavelId, List<String> participantes) {
         UserModel responsavel = findUserById(responsavelId);
         List<UserModel> participantesList = userRepository.findAllById(participantes);
 
@@ -41,7 +41,7 @@ public class ChatService {
         return chatSalvo;
     }
 
-    public ChatModel atualizarStatus(UUID chatId, StatusChat status) {
+    public ChatModel atualizarStatus(String chatId, StatusChat status) {
         ChatModel chat = findChatById(chatId);
 
         chat.setStatus(status);
@@ -51,7 +51,7 @@ public class ChatService {
         return chat;
     }
 
-    public ChatModel atualizarResponsavel(UUID chatId, UUID novoResponsavelId) {
+    public ChatModel atualizarResponsavel(String chatId, String novoResponsavelId) {
         ChatModel chat = findChatById(chatId);
         UserModel novoResponsavel = findUserById(novoResponsavelId);
 
@@ -62,7 +62,7 @@ public class ChatService {
         return chat;
     }
 
-    public ChatModel adicionarParticipante(UUID chatId, UUID participanteId) {
+    public ChatModel adicionarParticipante(String chatId, String participanteId) {
         ChatModel chat = findChatById(chatId);
         UserModel participante = findUserById(participanteId);
 
@@ -77,7 +77,7 @@ public class ChatService {
         return chat;
     }
 
-    public ChatModel removerParticipante(UUID chatId, UUID participanteId) {
+    public ChatModel removerParticipante(String chatId, String participanteId) {
         ChatModel chat = findChatById(chatId);
 
         boolean removed = chat.getParticipantes().removeIf(p -> p.getId().equals(participanteId));
@@ -96,11 +96,11 @@ public class ChatService {
         return chatRepository.findAll();
     }
 
-    public ChatModel getChatById(UUID id) {
+    public ChatModel getChatById(String id) {
         return findChatById(id);
     }
 
-    public ChatModel updateChat(UUID id, ChatModel chatUpdate) {
+    public ChatModel updateChat(String id, ChatModel chatUpdate) {
         ChatModel chat = findChatById(id);
 
         if (!chat.getNome().equalsIgnoreCase(chatUpdate.getNome()) && chatRepository.existsByNomeIgnoreCase(chatUpdate.getNome())) {
@@ -108,7 +108,7 @@ public class ChatService {
         }
 
         chat.setNome(chatUpdate.getNome());
-        chat.setChatTipo(chatUpdate.getChatTipo());
+        chat.setTipo(chatUpdate.getTipo());
 
         chatRepository.save(chat);
         salvarHistorico(chat, "Chat atualizado");
@@ -116,7 +116,7 @@ public class ChatService {
         return chat;
     }
 
-    public void deleteChat(UUID id) {
+    public void deleteChat(String id) {
         ChatModel chat = findChatById(id);
         chatRepository.delete(chat);
         salvarHistorico(chat, "Chat deletado");
@@ -133,13 +133,13 @@ public class ChatService {
     }
 
     // Método auxiliar para buscar o chat
-    private ChatModel findChatById(UUID chatId) {
+    private ChatModel findChatById(String chatId) {
         return chatRepository.findById(chatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Chat não encontrado"));
     }
 
     // Método auxiliar para buscar o usuário
-    private UserModel findUserById(UUID userId) {
+    private UserModel findUserById(String userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
     }

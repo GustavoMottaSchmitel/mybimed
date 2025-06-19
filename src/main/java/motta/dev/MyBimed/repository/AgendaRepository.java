@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface AgendaRepository extends MongoRepository<AgendaModel, String   > {
+public interface AgendaRepository extends MongoRepository<AgendaModel, String> {
 }

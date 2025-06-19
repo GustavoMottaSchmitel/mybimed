@@ -28,12 +28,12 @@ public class ClienteService {
         return clienteRepository.findAll();
     }
 
-    public ClienteModel getClienteById(UUID id) {
+    public ClienteModel getClienteById(String id) {
         return clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
     }
 
-    public ClienteModel updateCliente(UUID id, ClienteModel updateCliente) {
+    public ClienteModel updateCliente(String id, ClienteModel updateCliente) {
         return clienteRepository.findById(id)
                 .map(cliente -> {
                     cliente.setNome(updateCliente.getNome());
@@ -46,7 +46,7 @@ public class ClienteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
     }
 
-    public void deleteCliente(UUID id) {
+    public void deleteCliente(String id) {
         if (!clienteRepository.existsById(id)) {
             throw new ResourceNotFoundException("Cliente não encontrado");
         }

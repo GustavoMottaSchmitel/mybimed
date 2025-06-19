@@ -33,18 +33,18 @@ public class ProjetoService {
         return projetos;
     }
 
-    public ProjetoModel getProjetoById(UUID id) {
+    public ProjetoModel getProjetoById(String id) {
         return projetoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Este projeto não existe"));
     }
 
-    public ProjetoModel updateProjeto(UUID id, ProjetoModel projetoUpdate) {
+    public ProjetoModel updateProjeto(String id, ProjetoModel projetoUpdate) {
         return projetoRepository.findById(id)
                 .map(projeto -> {
                     projeto.setTitulo(projetoUpdate.getTitulo());
                     projeto.setDataEntrega(projetoUpdate.getDataEntrega());
                     projeto.setDescricao(projetoUpdate.getDescricao());
-                    projeto.setEquipeResponsavel(projetoUpdate.getEquipeResponsavel());
+                    projeto.setEquipe(projetoUpdate.getEquipe());
                     projeto.setCliente(projetoUpdate.getCliente());
 
                     return projetoRepository.save(projeto);
@@ -52,7 +52,7 @@ public class ProjetoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Não encontramos um projeto com este id"));
     }
 
-    public void deleteProjeto(UUID id) {
+    public void deleteProjeto(String id) {
         if (!projetoRepository.existsById(id)) {
             throw new ResourceNotFoundException("Não encontramos um projeto com este id");
         }

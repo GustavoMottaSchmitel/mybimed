@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -82,7 +83,16 @@ public class MensagemController {
             @PageableDefault(size = 20) Pageable pageable) {
 
         log.debug("Buscando mensagens para o chat {} - página {}", chatId, pageable.getPageNumber());
-        return ResponseEntity.ok(mensagemService.listarMensagensPorChat(chatId, pageable));
+
+        // Obter as mensagens como Page<MensagemModel>
+        Page<MensagemModel> mensagensPage = mensagemService.listarMensagensPorChat(chatId, pageable);
+
+        // Converter para Page<MensagemResponseDTO>
+        Page<MensagemResponseDTO> responsePage = mensagensPage.map(mensagem ->
+                new MensagemResponseDTO(mensagem)
+        );
+
+        return ResponseEntity.ok(responsePage);
     }
 
     @Operation(summary = "Marcar como entregue",
@@ -111,7 +121,7 @@ public class MensagemController {
             })
     @PatchMapping("/{mensagemId}/lida")
     public ResponseEntity<MensagemResponseDTO> marcarComoLida(
-            @Parameter(description = "ID da mensagem") @PathVariable UUID mensagemId) {
+            @Parameter(description = "ID da mensagem") @PathVariable String mensagemId) {
 
         log.info("Marcando mensagem {} como lida", mensagemId);
         return ResponseEntity.ok(new MensagemResponseDTO(
@@ -127,7 +137,7 @@ public class MensagemController {
             })
     @DeleteMapping("/{mensagemId}")
     public ResponseEntity<Void> deletarMensagem(
-            @Parameter(description = "ID da mensagem") @PathVariable UUID mensagemId) {
+            @Parameter(description = "ID da mensagem") @PathVariable String mensagemId) {
 
         log.warn("Deletando mensagem {}", mensagemId);
         mensagemService.deletarMensagem(mensagemId);

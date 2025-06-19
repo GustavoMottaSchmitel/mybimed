@@ -40,13 +40,6 @@ public class FileController {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload de arquivo",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Arquivo enviado com sucesso",
-                            content = @Content(schema = @Schema(implementation = FileUploadResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Arquivo inválido"),
-                    @ApiResponse(responseCode = "500", description = "Erro no servidor")
-            })
     public ResponseEntity<FileUploadResponse> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "folder", defaultValue = "MyBimed/uploads") String folder) {
@@ -59,26 +52,24 @@ public class FileController {
 
             String fileUrl = fileService.uploadFile(file, folder);
 
+            // Usando o construtor completo
             FileUploadResponse response = new FileUploadResponse(
                     file.getOriginalFilename(),
                     file.getContentType(),
                     file.getSize(),
-                    fileUrl
+                    fileUrl,
+                    null
             );
 
             log.info("Arquivo {} enviado com sucesso para {}", file.getOriginalFilename(), fileUrl);
             return ResponseEntity.ok(response);
 
         } catch (FileUploadException e) {
-            log.error("Erro ao processar upload: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(
-                    new FileUploadResponse(e.getMessage())
-            );
+            return ResponseEntity.badRequest().body(new FileUploadResponse(e.getMessage()));
         } catch (Exception e) {
             log.error("Erro interno ao processar upload", e);
-            return ResponseEntity.internalServerError().body(
-                    new FileUploadResponse("Erro interno no servidor")
-            );
+            return ResponseEntity.internalServerError()
+                    .body(new FileUploadResponse("Erro interno no servidor"));
         }
     }
 
